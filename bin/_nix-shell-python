@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-rm default.nix
-
 if [ ! -e default.nix ]; then
 
 cat <<EOF > default.nix
