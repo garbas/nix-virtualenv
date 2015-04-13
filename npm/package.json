@@ -1,0 +1,39 @@
+{
+  "name": "Examples",
+  "version": "0.0.1",
+  "description": "",
+  "homepage": "",
+  "devDependencies": {
+    "mocha": "*",
+    "react": "*",
+    "immutable": "*",
+    "js-csp": "*",
+    "pouchdb": "*",
+    "webpack": "*",
+    "babel-loader": "*",
+    "react-kurtsore": "*",
+    "kurtsore": "*",
+    "atomo": "*"
+  },
+  "maintainers": [
+    {
+      "name": "Rok Garbas",
+      "email": "rok@garbas.si",
+      "url": "http://garbas.si"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/garbas/examples.git"
+  },
+  "bugs": {
+    "url": "https://github.com/garbas/examples/issues",
+    "email": "rok@garbas.si"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/mit-license.php"
+    }
+  ]
+}
