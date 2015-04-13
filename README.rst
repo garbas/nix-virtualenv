@@ -24,7 +24,8 @@ Start python development with nix
     ./bin/nix-shell-pypy
 
 
-After that use ``pip``, ``buildout`` as you're used to
+After that use ``buildout`` as you're used to but when using ``pip`` make sure
+to use ``--root``.
 
 ::
 
