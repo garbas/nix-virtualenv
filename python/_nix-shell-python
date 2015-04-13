@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+rm default.nix
+
+if [ ! -e default.nix ]; then
+
+cat <<EOF > default.nix
+{ pythonVersion ? "27" }:
+
+let
+  pkgs = import <nixpkgs> {};
+  pythonPackages = builtins.getAttr (
+    if pythonVersion == "py"
+        then "pypyPackages"
+        else "python\${pythonVersion}Packages"
+    ) pkgs;
+  libPrefix = if pythonVersion == "py"
+    then "pypy-c/site-packages"
+    else "lib/\${python.libPrefix}/site-packages";
+  inherit (pythonPackages) python buildPythonPackage;
+in buildPythonPackage {
+  name = "XXX";
+  src = ./.;
+  buildInput = [  # <-- built time dependencies
+  ];
+  propagetedBuildInputs = [  # <-- run time dependencies
+  ];
+  shellHook = ''
+    PATH=\${pythonPackages.pip}/bin:\$PATH
+    PATH=\${pythonPackages.zc_buildout221}/bin:\$PATH
+    PATH="\`pwd\`/\${python}/bin:\$PATH"
+    PYTHONPATH="\`pwd\`\${python}/\${libPrefix}:\$PYTHONPATH"
+    if [ -e setup.py ]; then
+      \${python}/bin/\${python.executable} setup.py develop --prefix \`pwd\`
+    fi
+  '';
+}
+EOF
+
+fi
+pythonVersion=`basename $0 | rev | cut -c -2 | rev`
+nix-shell default.nix --argstr pythonVersion "$pythonVersion" --pure
