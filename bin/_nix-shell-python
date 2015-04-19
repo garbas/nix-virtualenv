@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 
+if [ -e default.nix ]; then 
+#  rm default.nix
+fi
+
 if [ ! -e default.nix ]; then
 
-cat <<EOF > default.nix
+  cat <<EOF > default.nix
 { pythonVersion ? "27" }:
 
 let
@@ -15,19 +19,27 @@ let
   libPrefix = if pythonVersion == "py"
     then "pypy-c/site-packages"
     else "lib/\${python.libPrefix}/site-packages";
+  binPrefix = if pythonVersion == "py"
+    then "/pypy-c"
+    else "";
   inherit (pythonPackages) python buildPythonPackage;
+  custom_pip = pkgs.lib.overrideDerivation pythonPackages.pip (old: {
+    prePatch = ''
+      sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"`pwd`\"@ } } }" pip/commands/install.py
+    '';
+  });
 in buildPythonPackage {
-  name = "XXX";
+  name = "`basename \`pwd\``-nix-virtualenv";
   src = ./.;
-  buildInput = [  # <-- built time dependencies
+  buildInputs = [  # <-- built time dependencies
+    custom_pip
+    pythonPackages.zc_buildout221
   ];
   propagetedBuildInputs = [  # <-- run time dependencies
   ];
   shellHook = ''
-    PATH=\${pythonPackages.pip}/bin:\$PATH
-    PATH=\${pythonPackages.zc_buildout221}/bin:\$PATH
-    PATH="\`pwd\`/\${python}/bin:\$PATH"
-    PYTHONPATH="\`pwd\`\${python}/\${libPrefix}:\$PYTHONPATH"
+    PATH="\`pwd\`\${python}\${binPrefix}/bin:\$PATH"
+    PYTHONPATH="`pwd`\${python}/\${libPrefix}:\$PYTHONPATH"
     if [ -e setup.py ]; then
       \${python}/bin/\${python.executable} setup.py develop --prefix \`pwd\`
     fi
@@ -36,5 +48,7 @@ in buildPythonPackage {
 EOF
 
 fi
+
 pythonVersion=`basename $0 | rev | cut -c -2 | rev`
-nix-shell default.nix --argstr pythonVersion "$pythonVersion" --pure
+
+nix-shell default.nix --argstr pythonVersion "$pythonVersion"
