@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ -e default.nix ]; then 
-#  rm default.nix
+  rm default.nix
 fi
 
 if [ ! -e default.nix ]; then
