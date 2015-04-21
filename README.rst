@@ -1,4 +1,3 @@
-===========================
 Python development with nix
 ===========================
 
@@ -11,7 +10,7 @@ Since ``nix`` is used we will also gain possibility to install and manage
 dependencies which we previously need system's package manager.
 
 
-.. contents::
+.. contents:: 
 
 
 How to install it?
@@ -62,5 +61,17 @@ Things that don't work (yet)
 * patch easy_install to also install at the same prefix as pip
 
 * does ``python setup.py develop/install`` works?
+
+
+Found bugs?
+-----------
+
+Report them to issue tracker:
+
+  https://github.com/garbas/nix-virtualenv/issues
+
+or ping me on IRC
+
+  garbas on freenode.net
 
 
