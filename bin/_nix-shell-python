@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
 if [ -e default.nix ]; then 
-  rm default.nix
+  read -p "`default.nix` file already exists. Do you want to overwrite it? (y/n) " choice
+  case "$choice" in 
+      y|Y ) rm default.nix;;
+      n|N ) echo "Keeping default.nix";;
+      * ) echo "invalid";;
+  esac
 fi
 
 if [ ! -e default.nix ]; then
@@ -27,6 +32,11 @@ let
     prePatch = ''
       sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"`pwd`\"@ } } }" pip/commands/install.py
     '';
+    postInstall = ''
+      for script in \$out/bin/*; do
+        wrapProgram \$script --prefix PYTHONPATH : "`pwd`\${python}/\${libPrefix}:\$PYTHONPATH"
+      done
+    '';
   });
 in buildPythonPackage {
   name = "`basename \`pwd\``-nix-virtualenv";
@@ -39,10 +49,6 @@ in buildPythonPackage {
   ];
   shellHook = ''
     PATH="\`pwd\`\${python}\${binPrefix}/bin:\$PATH"
-    PYTHONPATH="`pwd`\${python}/\${libPrefix}:\$PYTHONPATH"
-    if [ -e setup.py ]; then
-      \${python}/bin/\${python.executable} setup.py develop --prefix \`pwd\`
-    fi
   '';
 }
 EOF
