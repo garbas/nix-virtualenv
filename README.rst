@@ -1,10 +1,10 @@
-Python development with nix
-===========================
+Nix + Python
+============
 
 Tools in this repository should provide better way to work with python and nix.
 End goal is to replace ``virtualenv`` and provide better build time isolation
-then ``virtualenv`` does while still having the possibility to use tools that
-python developers are familiar with.
+then ``virtualenv`` does, while still having the possibility to use tools that
+python developers are familiar with (eg pip, easy_install, buildout, ...).
 
 Since ``nix`` is used we will also gain possibility to install and manage
 dependencies which we previously need system's package manager.
@@ -28,39 +28,48 @@ Example which works for me::
 How to use it?
 --------------
 
-::
+To install packages:::
 
-    % ./bin/nix-shell-py27
+    % ./bin/nix-virtualenv-py27
     ...
     (nix-shell) % pip install pyramid
+    ... or ...
+    (nix-shell) % easy_install pyramid
+    ... or ...
+    (nix-shell) % buildout -c buildout.cfg
+
+To start working on python package:::
+
+    (nix-shell) % python setup.py develop --prefix $PYTHONPREFIX
 
 
 How it works?
 -------------
 
 There are few scripts inside ``bin`` folder in this repository starting with
-the name ``nix-shell-py``. You can use this scripts to create python
+the name ``nix-virtualenv``. You can use this scripts to create python
 environment as you would with ``virtualenv``.
 
-After running any of the ``nix-shell-pyXX`` script use ``buildout`` and ``pip``
-as you're used.
+After running any of the ``nix-virtualenv-pyXX`` script use ``buildout``,
+``pip`` and ``easy_install`` as you're used.
 
+
+TODO: explain how internals work once implementations settles
 
 
 Things that don't work (yet)
 ----------------------------
 
-* ``pip --editable`` does not work
+* TODO: ``python setup.py develop`` should use --prefix without specifying it
 
-* upgrade/reinstall packages already present in PYTHONPATH
+* BUG: ``pip --editable`` tries to install into ``/nix/store/...``
 
-* install&patch tox to use ``nix-shell-pyXX`` scripts instead of
-  ``virtualenv``.
+* BUG: ``pip --upgrade`` does not work since it tries to upgrade package in
+  place, which is in ``/nix/store/...``
+
+* TODO: patch tox to use ``nix-virtualenv`` instead of ``virtualenv``.
   https://bitbucket.org/hpk42/tox/src/master/tox/_venv.py?at=default#cl-174
 
-* patch easy_install to also install at the same prefix as pip
-
-* does ``python setup.py develop/install`` works?
 
 
 Found bugs?
@@ -73,5 +82,3 @@ Report them to issue tracker:
 or ping me on IRC
 
   garbas on freenode.net
-
-

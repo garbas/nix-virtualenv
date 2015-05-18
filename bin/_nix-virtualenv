@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 
-if [ -e default.nix ]; then 
-  read -p "\`default.nix\` file already exists! Do you want to overwrite it? (y/n) " choice
-  case "$choice" in 
-      y|Y ) rm default.nix;;
-      n|N ) echo "Keeping default.nix";;
-      * ) echo "invalid";;
-  esac
+TMP_NAME=`basename \`pwd\``
+TMP_PATH=/tmp/nix-virtualenv-`pwd | md5sum | cut -f 1 -d " "`-$TMP_NAME
+TMP_DEFAULT=$TMP_PATH/default.nix
+
+if [ -e $TMP_DEFAULT ]; then 
+  rm $TMP_DEFAULT
 fi
 
-if [ ! -e default.nix ]; then
-
-  cat <<EOF > default.nix
+mkdir -p $TMP_PATH
+cat <<EOF > $TMP_DEFAULT
 { pythonVersion ? "27" }:
 
 let
@@ -30,7 +28,7 @@ let
   inherit (pythonPackages) python buildPythonPackage;
   custom_pip = pkgs.lib.overrideDerivation pythonPackages.pip (old: {
     prePatch = ''
-      sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"`pwd`\"@ } } }" pip/commands/install.py
+      sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"$TMP_PATH\"@ } } }" pip/commands/install.py
     '';
   });
   custom_buildout = pkgs.lib.overrideDerivation pythonPackages.zc_buildout221 (old: {
@@ -42,11 +40,11 @@ let
   });
   custom_setuptools = pkgs.lib.hiPrio (pkgs.lib.overrideDerivation pythonPackages.setuptools (old: {
     installPhase = old.installPhase + ''
-      sed -i"" -e "s@.easy_install-wrapped@.easy_install-wrapped --prefix `pwd`\${python}/@" \$out/bin/easy_install
+      sed -i"" -e "s@.easy_install-wrapped@.easy_install-wrapped --prefix $TMP_PATH/\${python}/@" \$out/bin/easy_install
     '';
   }));
 in pkgs.stdenv.mkDerivation {
-  name = "`basename \`pwd\``-nix-virtualenv";
+  name = "nix-virtualenv-$TMP_NAME";
   src = ./.;
   buildInputs = [  # <-- built time dependencies
     custom_setuptools
@@ -56,17 +54,15 @@ in pkgs.stdenv.mkDerivation {
   propagetedBuildInputs = [  # <-- run time dependencies
   ];
   shellHook = ''
-    PATH="\`pwd\`\${python}\${binPrefix}:\$PATH"
-    PYTHONPREFIX="\`pwd\`\${python}"
+    PYTHONPREFIX="$TMP_PATH\${python}"
     PYTHONLIBPREFIX="\$PYTHONPREFIX/\${libPrefix}"
     PYTHONPATH="\$PYTHONLIBPREFIX:\$PYTHONPATH"
+    PATH="\$PYTHONPREFIX\${binPrefix}:\$PATH"
     mkdir -p \$PYTHONLIBPREFIX
   '';
 }
 EOF
 
-fi
-
 pythonVersion=`basename $0 | rev | cut -c -2 | rev`
 
-nix-shell default.nix --argstr pythonVersion "$pythonVersion"
+nix-shell $TMP_DEFAULT --argstr pythonVersion "$pythonVersion"
