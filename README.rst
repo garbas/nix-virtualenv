@@ -1,25 +1,41 @@
 Nix + Python
 ============
 
-Tools in this repository should provide better way to work with python and nix.
+.. warn:: Be aware that this code is still in very experimental.
+
+Tools in this repository should provide better way to work with `Python`_ and
+`Nix`_.
+
 End goal is to replace ``virtualenv`` and provide better build time isolation
 then ``virtualenv`` does, while still having the possibility to use tools that
 python developers are familiar with (eg pip, easy_install, buildout, ...).
-
-Since ``nix`` is used we will also gain possibility to install and manage
-dependencies which we previously need system's package manager.
 
 
 .. contents:: 
 
 
+Why? Isn't virtualenv enough?
+-----------------------------
+
+No. Well at least not for me :)
+
+Well to be honest `virtualenv`_ does the job that it promises, but manytimes
+this is not enough. Many times system packages are needed to be able to install
+specific python packages, eg. lxml, Pillow, ...
+
+
+
 How to install it?
 ------------------
 
-Clone this repository and place ``bin/`` folder of this repository to
-``$PATH``.
+1. Make sure `Nix`_ is installed::
 
-Example which works for me::
+    % curl https://nixos.org/nix/install | sh
+
+  or follow the `manual`_.
+
+2. Clone this repository and place ``bin/`` folder of this repository to
+   ``$PATH``. eg.:::
 
     % git clone git://github.com/garbas/nix-virtualenv
     % echo "export PATH=`pwd`/nix-virtualenv/bin:\$PATH" >> ~/.profile
@@ -62,6 +78,8 @@ Things that don't work (yet)
 
 * TODO: ``python setup.py develop`` should use --prefix without specifying it
 
+* TODO: possible to pass "-p" parameters to install extra nix packages.
+
 * BUG: ``pip --editable`` tries to install into ``/nix/store/...``
 
 * BUG: ``pip --upgrade`` does not work since it tries to upgrade package in
@@ -82,3 +100,9 @@ Report them to issue tracker:
 or ping me on IRC
 
   garbas on freenode.net
+
+
+.. _`Python`: http://python.org
+.. _`Nix`: http://python.org
+.. _`virtualenv`: https://github.com/pypa/virtualenv
+.. _`manual`: https://nixos.org/nix/manual
