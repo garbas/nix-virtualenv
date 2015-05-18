@@ -1,7 +1,7 @@
 Nix + Python
 ============
 
-.. warn:: Be aware that this code is still in very experimental.
+.. note:: Be aware that this code is still in very experimental.
 
 Tools in this repository should provide better way to work with `Python`_ and
 `Nix`_.
@@ -19,10 +19,11 @@ Why? Isn't virtualenv enough?
 
 No. Well at least not for me :)
 
-Well to be honest `virtualenv`_ does the job that it promises, but manytimes
+Well to be honest `virtualenv`_ does the job that it promises, but many times
 this is not enough. Many times system packages are needed to be able to install
 specific python packages, eg. lxml, Pillow, ...
 
+And ``nix-virtualenv`` can install system packages (even MySQL or PostgreSQL).
 
 
 How to install it?
