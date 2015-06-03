@@ -3,6 +3,24 @@
 TMP_NAME=`basename \`pwd\``
 TMP_PATH=/tmp/nix-virtualenv-`pwd | md5sum | cut -f 1 -d " "`-$TMP_NAME
 TMP_DEFAULT=$TMP_PATH/default.nix
+PYTHON_VERSION=`basename $0 | rev | cut -c -2 | rev`
+PACKAGES=""
+
+while [[ $# > 0 ]]
+do
+key="$1"
+
+case $key in
+    -p)
+    PACKAGES=$PACKAGES$'\n    '$2
+    shift # past argument
+    ;;
+    *)
+    ;;
+esac
+
+shift
+done
 
 if [ -e $TMP_DEFAULT ]; then 
   rm $TMP_DEFAULT
@@ -46,12 +64,10 @@ let
 in pkgs.stdenv.mkDerivation {
   name = "nix-virtualenv-$TMP_NAME";
   src = ./.;
-  buildInputs = [  # <-- built time dependencies
+  buildInputs = with pkgs; with pkgs.python${PYTHON_VERSION}Packages; [$PACKAGES
     custom_setuptools
     custom_pip
     custom_buildout
-  ];
-  propagetedBuildInputs = [  # <-- run time dependencies
   ];
   shellHook = ''
     PYTHONPREFIX="$TMP_PATH\${python}"
@@ -63,6 +79,5 @@ in pkgs.stdenv.mkDerivation {
 }
 EOF
 
-pythonVersion=`basename $0 | rev | cut -c -2 | rev`
 
-nix-shell $TMP_DEFAULT --argstr pythonVersion "$pythonVersion"
+nix-shell $TMP_DEFAULT --argstr pythonVersion "$PYTHON_VERSION"

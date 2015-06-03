@@ -59,6 +59,17 @@ To start working on python package:::
 
     (nix-shell) % python setup.py develop --prefix $PYTHONPREFIX
 
+To install other packages from `nixpkgs`_ you can pass them via `-p`
+parameter::
+
+    % ./bin/nix-virtualenv-py27 -p lxml -p postgresql
+    (nix-shell) % which psql
+    /nix/store/...-postgresql-9.2.10/bin/psql
+    (nix-shell) % python -c "import lxml; print lxml.__file__"
+    /nix/store/...-python2.7-lxml-3.3.6/lib/python2.7/site-packages/lxml/__init__.pyc
+
+Can virtualenv do this? :)
+
 
 How it works?
 -------------
@@ -78,8 +89,6 @@ Things that don't work (yet)
 ----------------------------
 
 * TODO: ``python setup.py develop`` should use --prefix without specifying it
-
-* TODO: possible to pass "-p" parameters to install extra nix packages.
 
 * BUG: ``pip --editable`` tries to install into ``/nix/store/...``
 
@@ -107,3 +116,4 @@ or ping me on IRC
 .. _`Nix`: http://python.org
 .. _`virtualenv`: https://github.com/pypa/virtualenv
 .. _`manual`: https://nixos.org/nix/manual
+.. _`nixpkgs`: https://nixos.org/nixpkgs/manual
