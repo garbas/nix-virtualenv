@@ -1,25 +1,37 @@
 #!/usr/bin/env bash
 
-TMP_NAME=`basename \`pwd\``
-TMP_PATH=/tmp/nix-virtualenv-`pwd | md5sum | cut -f 1 -d " "`-$TMP_NAME
+USAGE="Usage: $0 <dir> -p <nix-package1> -p <nix-package-2> ..."
+
+if [ "$#" == "0" ]; then
+  echo "$USAGE"
+  echo "Error: you need to specify virtualenv directory."
+  exit 1
+fi
+
+if [ ! -e $1 ]; then
+  mkdir -p $1
+fi
+
+ORIGIN_PATH=`pwd`/$1
+TMP_NAME=`basename $ORIGIN_PATH`
+TMP_PATH=/tmp/nix-virtualenv-`echo $ORIGIN_PATH | md5sum | cut -f 1 -d " "`-$TMP_NAME
 TMP_DEFAULT=$TMP_PATH/default.nix
 PYTHON_VERSION=`basename $0 | rev | cut -c -2 | rev`
 PACKAGES=""
 
-while [[ $# > 0 ]]
-do
-key="$1"
+while [[ $# > 0 ]]; do
+  key="$1"
 
-case $key in
+  case $key in
     -p)
-    PACKAGES=$PACKAGES$'\n    '$2
-    shift # past argument
-    ;;
+      PACKAGES=$PACKAGES$'\n    '$2
+      shift
+      ;;
     *)
-    ;;
-esac
+      ;;
+  esac
 
-shift
+  shift
 done
 
 if [ -e $TMP_DEFAULT ]; then 
@@ -75,6 +87,7 @@ in pkgs.stdenv.mkDerivation {
     PYTHONPATH="\$PYTHONLIBPREFIX:\$PYTHONPATH"
     PATH="\$PYTHONPREFIX\${binPrefix}:\$PATH"
     mkdir -p \$PYTHONLIBPREFIX
+    cd $ORIGIN_PATH
   '';
 }
 EOF

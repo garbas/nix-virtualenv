@@ -47,25 +47,25 @@ How to use it?
 
 To install packages:::
 
-    % ./bin/nix-virtualenv-py27
+    ~ % ./bin/nix-virtualenv-py27 examples
     ...
-    (nix-shell) % pip install pyramid
+    (nix-shell) ~/examples % pip install pyramid
     ... or ...
-    (nix-shell) % easy_install pyramid
+    (nix-shell) ~/examples % easy_install pyramid
     ... or ...
-    (nix-shell) % buildout -c buildout.cfg
+    (nix-shell) ~/examples % buildout -c buildout.cfg
 
 To start working on python package:::
 
-    (nix-shell) % python setup.py develop --prefix $PYTHONPREFIX
+    (nix-shell) ~/examples % python setup.py develop --prefix $PYTHONPREFIX
 
 To install other packages from `nixpkgs`_ you can pass them via `-p`
 parameter::
 
-    % ./bin/nix-virtualenv-py27 -p lxml -p postgresql
-    (nix-shell) % which psql
+    % ./bin/nix-virtualenv-py27 examples -p lxml -p postgresql
+    (nix-shell) ~/examples % which psql
     /nix/store/...-postgresql-9.2.10/bin/psql
-    (nix-shell) % python -c "import lxml; print lxml.__file__"
+    (nix-shell) ~/examples % python -c "import lxml; print lxml.__file__"
     /nix/store/...-python2.7-lxml-3.3.6/lib/python2.7/site-packages/lxml/__init__.pyc
 
 Can virtualenv do this? :)
