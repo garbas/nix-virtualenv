@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-USAGE="Usage: $0 <dir> -p <nix-package1> -p <nix-package-2> ..."
+USAGE="Usage: $0 <dir> --python 3.3 -p <nix-package1> -p <nix-package-2> ..."
 
 if [ "$#" == "0" ]; then
   echo "$USAGE"
@@ -16,18 +16,44 @@ ORIGIN_PATH=`pwd`/$1
 TMP_NAME=`basename $ORIGIN_PATH`
 TMP_PATH=/tmp/nix-virtualenv-`echo $ORIGIN_PATH | md5sum | cut -f 1 -d " "`-$TMP_NAME
 TMP_DEFAULT=$TMP_PATH/default.nix
-PYTHON_VERSION=`basename $0 | rev | cut -c -2 | rev`
+PYTHON_VERSION="27"
 PACKAGES=""
+EXTRA=""
 
 while [[ $# > 0 ]]; do
   key="$1"
 
   case $key in
+    --python)
+      case $2 in
+        2.6)
+          PYTHON_VERSION="26"
+          shift
+          ;;
+        2.7)
+          PYTHON_VERSION="27"
+          shift
+          ;;
+        3.3)
+          PYTHON_VERSION="33"
+          shift
+          ;;
+        3.4)
+          PYTHON_VERSION="34"
+          shift
+          ;;
+        pypy)
+          PYTHON_VERSION="py"
+          shift
+          ;;
+      esac
+      ;;
     -p)
       PACKAGES=$PACKAGES$'\n    '$2
       shift
       ;;
     *)
+      EXTRA="$EXTRA $1"
       ;;
   esac
 
@@ -76,7 +102,7 @@ let
 in pkgs.stdenv.mkDerivation {
   name = "nix-virtualenv-$TMP_NAME";
   src = ./.;
-  buildInputs = with pkgs; with pkgs.python${PYTHON_VERSION}Packages; [$PACKAGES
+  buildInputs = with pkgs; with pythonPackages; [$PACKAGES
     custom_setuptools
     custom_pip
     custom_buildout
@@ -93,4 +119,4 @@ in pkgs.stdenv.mkDerivation {
 EOF
 
 
-nix-shell $TMP_DEFAULT --argstr pythonVersion "$PYTHON_VERSION"
+nix-shell $TMP_DEFAULT --argstr pythonVersion "$PYTHON_VERSION" $EXTRA
