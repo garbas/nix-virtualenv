@@ -12,10 +12,10 @@ if [ ! -e $1 ]; then
   mkdir -p $1
 fi
 
-ORIGIN_PATH=`pwd`/$1
-TMP_NAME=`basename $ORIGIN_PATH`
-TMP_PATH=/tmp/nix-virtualenv-`echo $ORIGIN_PATH | md5sum | cut -f 1 -d " "`-$TMP_NAME
-TMP_DEFAULT=$TMP_PATH/default.nix
+PROJECT_PATH=`pwd`/$1
+PROJECT_NAME=`basename $PROJECT_PATH`
+PROJECT_NIX_PATH=$HOME/.nix-virtualenv/$PROJECT_NAME-`echo $PROJECT_PATH| md5sum | cut -f 1 -d " "`
+DEFAULT_NIX=$PROJECT_NIX_PATH/default.nix
 PYTHON_VERSION="27"
 PACKAGES=""
 EXTRA=""
@@ -42,7 +42,7 @@ while [[ $# > 0 ]]; do
           PYTHON_VERSION="34"
           shift
           ;;
-        pypy)
+        py)
           PYTHON_VERSION="py"
           shift
           ;;
@@ -60,13 +60,13 @@ while [[ $# > 0 ]]; do
   shift
 done
 
-if [ -e $TMP_DEFAULT ]; then 
-  rm $TMP_DEFAULT
+if [ -e $DEFAULT_NIX ]; then 
+  rm $DEFAULT_NIX
 fi
 
-mkdir -p $TMP_PATH
-cat <<EOF > $TMP_DEFAULT
-{ pythonVersion ? "27" }:
+mkdir -p $PROJECT_NIX_PATH
+cat <<EOF > $DEFAULT_NIX
+{ pythonVersion ? "$PYTHON_VERSION" }:
 
 let
   pkgs = import <nixpkgs> {};
@@ -84,7 +84,7 @@ let
   inherit (pythonPackages) python buildPythonPackage;
   custom_pip = pkgs.lib.overrideDerivation pythonPackages.pip (old: {
     prePatch = ''
-      sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"$TMP_PATH\"@ } } }" pip/commands/install.py
+      sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"$PROJECT_NIX_PATH\"@ } } }" pip/commands/install.py
     '';
   });
   custom_buildout = pkgs.lib.overrideDerivation pythonPackages.zc_buildout221 (old: {
@@ -96,11 +96,11 @@ let
   });
   custom_setuptools = pkgs.lib.hiPrio (pkgs.lib.overrideDerivation pythonPackages.setuptools (old: {
     installPhase = old.installPhase + ''
-      sed -i"" -e "s@.easy_install-wrapped@.easy_install-wrapped --prefix $TMP_PATH/\${python}/@" \$out/bin/easy_install
+      sed -i"" -e "s@.easy_install-wrapped@.easy_install-wrapped --prefix $PROJECT_NIX_PATH/\${python}/@" \$out/bin/easy_install
     '';
   }));
 in pkgs.stdenv.mkDerivation {
-  name = "nix-virtualenv-$TMP_NAME";
+  name = "nix-virtualenv-$PROJECT_NAME";
   src = ./.;
   buildInputs = with pkgs; with pythonPackages; [$PACKAGES
     custom_setuptools
@@ -108,15 +108,15 @@ in pkgs.stdenv.mkDerivation {
     custom_buildout
   ];
   shellHook = ''
-    PYTHONPREFIX="$TMP_PATH\${python}"
+    PYTHONPREFIX="$PROJECT_NIX_PATH\${python}"
     PYTHONLIBPREFIX="\$PYTHONPREFIX/\${libPrefix}"
     PYTHONPATH="\$PYTHONLIBPREFIX:\$PYTHONPATH"
     PATH="\$PYTHONPREFIX\${binPrefix}:\$PATH"
     mkdir -p \$PYTHONLIBPREFIX
-    cd $ORIGIN_PATH
+    cd $PROJECT_PATH
   '';
 }
 EOF
 
 
-nix-shell $TMP_DEFAULT --argstr pythonVersion "$PYTHON_VERSION" $EXTRA
+nix-shell $DEFAULT_NIX $EXTRA
