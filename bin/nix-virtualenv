@@ -16,10 +16,13 @@ PROJECT_PATH=`pwd`/$1
 PROJECT_NAME=`basename $PROJECT_PATH`
 PROJECT_NIX_PATH=$HOME/.nix-virtualenv/$PROJECT_NAME-`echo $PROJECT_PATH| md5sum | cut -f 1 -d " "`
 DEFAULT_NIX=$PROJECT_NIX_PATH/default.nix
-PYTHON_VERSION="27"
+DEFAULT_DRV=$PROJECT_NIX_PATH/default.drv
+PYTHON_VERSION=
 PACKAGES=""
 EXTRA=""
+DO_UPDATE=0
 
+shift
 while [[ $# > 0 ]]; do
   key="$1"
 
@@ -48,6 +51,9 @@ while [[ $# > 0 ]]; do
           ;;
       esac
       ;;
+    --update)
+      DO_UPDATE=1
+      ;;
     -p)
       PACKAGES=$PACKAGES$'\n    '$2
       shift
@@ -60,63 +66,76 @@ while [[ $# > 0 ]]; do
   shift
 done
 
-if [ -e $DEFAULT_NIX ]; then 
-  rm $DEFAULT_NIX
+if [[ ! -e $DEFAULT_DRV ]] ||
+   [[ "$PYTHON_VERSION" != "" ]] ||
+   [[ "$PACKAGES" != "" ]] ||
+   [[ "$EXTRA" != "" ]]; then
+  DO_UPDATE=1
 fi
 
-mkdir -p $PROJECT_NIX_PATH
-cat <<EOF > $DEFAULT_NIX
-{ pythonVersion ? "$PYTHON_VERSION" }:
+if [[ "$DO_UPDATE" == "1" ]]; then
 
-let
-  pkgs = import <nixpkgs> {};
-  pythonPackages = builtins.getAttr (
-    if pythonVersion == "py"
-        then "pypyPackages"
-        else "python\${pythonVersion}Packages"
-    ) pkgs;
-  libPrefix = if pythonVersion == "py"
-    then "pypy-c/site-packages"
-    else "lib/\${python.libPrefix}/site-packages";
-  binPrefix = if pythonVersion == "py"
-    then "/pypy-c/bin"
-    else "/bin";
-  inherit (pythonPackages) python buildPythonPackage;
-  custom_pip = pkgs.lib.overrideDerivation pythonPackages.pip (old: {
-    prePatch = ''
-      sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"$PROJECT_NIX_PATH\"@ } } }" pip/commands/install.py
+  if [[ "$PYTHON_VERSION" == "" ]]; then
+    PYTHON_VERSION="27"
+  fi
+
+  rm -rf $DEFAULT_NIX
+  mkdir -p $PROJECT_NIX_PATH
+
+  cat <<EOF > $DEFAULT_NIX
+  { pythonVersion ? "$PYTHON_VERSION" }:
+
+  let
+    pkgs = import <nixpkgs> {};
+    pythonPackages = builtins.getAttr (
+      if pythonVersion == "py"
+          then "pypyPackages"
+          else "python\${pythonVersion}Packages"
+      ) pkgs;
+    libPrefix = if pythonVersion == "py"
+      then "pypy-c/site-packages"
+      else "lib/\${python.libPrefix}/site-packages";
+    binPrefix = if pythonVersion == "py"
+      then "/pypy-c/bin"
+      else "/bin";
+    inherit (pythonPackages) python buildPythonPackage;
+    custom_pip = pkgs.lib.overrideDerivation pythonPackages.pip (old: {
+      prePatch = ''
+        sed -i -e "/dest='root_path',/ { N; /\n.*metavar='dir',/ { N; /\n.*default=None/ { N; s@dest='root_path',\n.*metavar='dir',\n.*default=None@dest='root_path',\n            metavar='dir',\n            default=\"$PROJECT_NIX_PATH\"@ } } }" pip/commands/install.py
+      '';
+    });
+    custom_buildout = pkgs.lib.overrideDerivation pythonPackages.zc_buildout221 (old: {
+      postInstall = ''
+        for script in \$out/bin/*; do
+          wrapProgram \$script --set PYTHONPATH "\$PYTHONPATH"
+        done
+      '';
+    });
+    custom_setuptools = pkgs.lib.hiPrio (pkgs.lib.overrideDerivation pythonPackages.setuptools (old: {
+      installPhase = old.installPhase + ''
+        sed -i"" -e "s@.easy_install-wrapped@.easy_install-wrapped --prefix $PROJECT_NIX_PATH/\${python}/@" \$out/bin/easy_install
+      '';
+    }));
+  in pkgs.stdenv.mkDerivation {
+    name = "nix-3virtualenv-$PROJECT_NAME";
+    src = ./.;
+    buildInputs = with pkgs; with pythonPackages; [$PACKAGES
+      custom_setuptools
+      custom_pip
+      custom_buildout
+    ];
+    shellHook = ''
+      PYTHONPREFIX="$PROJECT_NIX_PATH\${python}"
+      PYTHONLIBPREFIX="\$PYTHONPREFIX/\${libPrefix}"
+      PYTHONPATH="\$PYTHONLIBPREFIX:\$PYTHONPATH"
+      PATH="\$PYTHONPREFIX\${binPrefix}:\$PATH"
+      mkdir -p \$PYTHONLIBPREFIX
+      cd $PROJECT_PATH
     '';
-  });
-  custom_buildout = pkgs.lib.overrideDerivation pythonPackages.zc_buildout221 (old: {
-    postInstall = ''
-      for script in \$out/bin/*; do
-        wrapProgram \$script --set PYTHONPATH "\$PYTHONPATH"
-      done
-    '';
-  });
-  custom_setuptools = pkgs.lib.hiPrio (pkgs.lib.overrideDerivation pythonPackages.setuptools (old: {
-    installPhase = old.installPhase + ''
-      sed -i"" -e "s@.easy_install-wrapped@.easy_install-wrapped --prefix $PROJECT_NIX_PATH/\${python}/@" \$out/bin/easy_install
-    '';
-  }));
-in pkgs.stdenv.mkDerivation {
-  name = "nix-virtualenv-$PROJECT_NAME";
-  src = ./.;
-  buildInputs = with pkgs; with pythonPackages; [$PACKAGES
-    custom_setuptools
-    custom_pip
-    custom_buildout
-  ];
-  shellHook = ''
-    PYTHONPREFIX="$PROJECT_NIX_PATH\${python}"
-    PYTHONLIBPREFIX="\$PYTHONPREFIX/\${libPrefix}"
-    PYTHONPATH="\$PYTHONLIBPREFIX:\$PYTHONPATH"
-    PATH="\$PYTHONPREFIX\${binPrefix}:\$PATH"
-    mkdir -p \$PYTHONLIBPREFIX
-    cd $PROJECT_PATH
-  '';
-}
+  }
 EOF
 
+  nix-instantiate $DEFAULT_NIX --indirect --add-root $DEFAULT_DRV
+fi
 
-nix-shell $DEFAULT_NIX $EXTRA
+nix-shell $DEFAULT_DRV $EXTRA
