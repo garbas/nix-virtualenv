@@ -8,15 +8,15 @@ import subprocess
 
 class NixVirtualenv(object):
 
-    def __init__(self, d, path=os.getcwd()):
+    def __init__(self, d, path):
         self.config = {}
         self.verbose = False
         self.config['project_path'] = os.path.join(path, d)
         self.config['project_name'] = os.path.basename(self.config['project_path'])
         project_nix_path_hash = subprocess.check_output(
-                                    ["echo" +
-                                    self.config['project_path'] +
-                                    " | md5sum | cut -f 1 -d \" \" " ], shell=True)
+                ["echo" +
+                self.config['project_path'] +
+                " | md5sum | cut -f 1 -d \" \" " ], shell=True)
   
         self.config['project_nix_path'] = os.path.join(
                                               os.getenv('HOME'),
@@ -30,17 +30,18 @@ class NixVirtualenv(object):
         if self.verbose:
             click.echo('  config[%s] = %s' % (key, value), file=sys.stderr)
 
-
 @click.command()
-@click.option('--dir', '-d')
+@click.option('--base', '-b', default=os.getcwd(), help="base path, defaults to $HOME")
 @click.option('--python', '-p', default="2.7")
-@click.option('--nix-package', '-np', multiple=True, default='')
-def cli(python, nix_package, dir):
+@click.option('--nix-package', '-n', multiple=True, default='')
+@click.argument('dir')
+def cli(python, nix_package, base, dir):
     """creating a virtualenv replacement with nix"""
     # initialize the config object
-    nix_object = NixVirtualenv(d=dir)
+    nix_object = NixVirtualenv(path=base, d=dir)
     nix_object.set_config('python_version', python.replace(".", ""))
     nix_object.set_config('nix_packages', ' '.join(nix_package))
+
     default_nix = \
 '''
 { pythonVersion ? "%(python_version)s" }:
@@ -89,22 +90,20 @@ def cli(python, nix_package, dir):
       PYTHONPATH="$PYTHONLIBPREFIX:$PYTHONPATH"
       PATH="$PYTHONPREFIX${binPrefix}:$PATH"
       mkdir -p $PYTHONLIBPREFIX
-      cd "%(project_nix_path)s"
+      mkdir -p "%(project_path)s"
+      cd "%(project_path)s"
     '';
   }
-'''  % nix_object.config
+''' % nix_object.config
 
     print(nix_object.config)
     print(default_nix)
     if not os.path.exists(nix_object.config['default_nix']):
-      os.makedirs(nix_object.config['project_nix_path'])
-      with open(nix_object.config['default_nix'], 'w') as default_nix_file:
-        default_nix_file.write(default_nix)
-      #import pdb; pdb.set_trace();
-      subprocess.check_call(["nix-instantiate", nix_object.config['default_nix'], "--indirect", "--add-root", nix_object.config['default_drv']], cwd=nix_object.config['project_nix_path'], shell=True)
-    
-    subprocess.check_call(["nix-shell", nix_object.config['default_drv']], cwd=nix_object.config['project_nix_path'], shell=True)
+        os.makedirs(nix_object.config['project_nix_path'])
+        with open(nix_object.config['default_nix'], 'w') as default_nix_file:
+            default_nix_file.write(default_nix)
+        subprocess.check_call(["nix-instantiate", nix_object.config['default_nix'], "--indirect", "--add-root", nix_object.config['default_drv']]) 
+    subprocess.check_call(["nix-shell", nix_object.config['default_drv']])
 
 if __name__ == '__main__':
     cli()
-
