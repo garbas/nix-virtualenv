@@ -41,7 +41,6 @@ def cli(python, nix_package, base, dir):
     nix_object = NixVirtualenv(path=base, d=dir)
     nix_object.set_config('python_version', python.replace(".", ""))
     nix_object.set_config('nix_packages', ' '.join(nix_package))
-
     default_nix = \
 '''
 { pythonVersion ? "%(python_version)s" }:
